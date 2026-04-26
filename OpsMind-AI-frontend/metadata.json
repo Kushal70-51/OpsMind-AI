@@ -1,0 +1,6 @@
+{
+  "name": "OpsMind AI",
+  "description": "A corporate RAG (Retrieval-Augmented Generation) system featuring a real-time chat interface and an admin knowledge base dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
