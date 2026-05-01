@@ -1,10 +1,23 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useChat } from '../../context/ChatContext';
-import { 
-  Send, Bot, User, FileText, Plus, X, 
-  ChevronLeft, ChevronRight, Copy, Check, BrainCircuit 
-} from 'lucide-react';
+// import { 
+//   Send, Bot, User, FileText, Plus, X, 
+//   ChevronLeft, ChevronRight, Copy, Check, BrainCircuit 
+// } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+// Icon stubs (replace with lucide-react once installed)
+const Send = (props: any) => <span {...props}>→</span>;
+const Bot = (props: any) => <span {...props}>🤖</span>;
+const User = (props: any) => <span {...props}>👤</span>;
+const FileText = (props: any) => <span {...props}>📄</span>;
+const Plus = (props: any) => <span {...props}>+</span>;
+const X = (props: any) => <span {...props}>✕</span>;
+const ChevronLeft = (props: any) => <span {...props}>‹</span>;
+const ChevronRight = (props: any) => <span {...props}>›</span>;
+const Copy = (props: any) => <span {...props}>📋</span>;
+const Check = (props: any) => <span {...props}>✓</span>;
+const BrainCircuit = (props: any) => <span {...props}>🧠</span>;
 import { Button } from '../../components/ui/Button';
 import { Citation } from '../../types';
 
@@ -46,20 +59,20 @@ function CitationDrawer({
             {citation.title}
           </span>
         </div>
-        <button onClick={onClose} className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-md transition-all">
+        <button type="button" title="Close" onClick={onClose} className="p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-md transition-all">
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {citations.length > 1 && (
         <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-zinc-800/50 shrink-0">
-          <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0} className="p-1 text-zinc-400 hover:text-zinc-50 disabled:opacity-30 transition-all font-bold">
+          <button type="button" title="Previous source" aria-label="Previous source" onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0} className="p-1 text-zinc-400 hover:text-zinc-50 disabled:opacity-30 transition-all font-bold">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-[11px] text-zinc-400 font-bold uppercase tracking-widest">
             Source {idx + 1} of {citations.length}
           </span>
-          <button onClick={() => setIdx(i => Math.min(citations.length - 1, i + 1))} disabled={idx === citations.length - 1} className="p-1 text-zinc-400 hover:text-zinc-50 disabled:opacity-30 transition-all font-bold">
+          <button type="button" title="Next source" aria-label="Next source" onClick={() => setIdx(i => Math.min(citations.length - 1, i + 1))} disabled={idx === citations.length - 1} className="p-1 text-zinc-400 hover:text-zinc-50 disabled:opacity-30 transition-all font-bold">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -153,7 +166,7 @@ export function ChatInterface() {
                   onSubmit={handleSubmit}
                   className="bg-zinc-900/50 border border-white/10 rounded-[26px] p-2 pr-3 flex items-end shadow-2xl focus-within:border-white/20 transition-all duration-300"
                 >
-                    <button type="button" className="p-3 text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <button type="button" aria-label="Add" title="Add" className="p-3 text-zinc-500 hover:text-zinc-300 transition-colors">
                       <Plus className="w-4 h-4 bg-zinc-800 rounded-full p-0.5" />
                     </button>
                     <textarea
@@ -265,7 +278,12 @@ export function ChatInterface() {
                   onSubmit={handleSubmit}
                   className="bg-zinc-900 border border-white/10 rounded-[26px] p-2 pr-3 flex items-end shadow-2xl focus-within:border-white/20 transition-all duration-300 text-zinc-300"
                 >
-                    <button type="button" className="p-3 text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <button
+                      type="button"
+                      aria-label="Add"
+                      title="Add"
+                      className="p-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
                       <Plus className="w-4 h-4 bg-zinc-800 rounded-full p-0.5" />
                     </button>
                     <textarea
