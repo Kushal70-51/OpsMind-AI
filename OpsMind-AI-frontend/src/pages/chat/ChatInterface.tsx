@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { useChat } from '../../context/ChatContext';
-// import { 
-//   Send, Bot, User, FileText, Plus, X, 
-//   ChevronLeft, ChevronRight, Copy, Check, BrainCircuit 
-// } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
+import { API_BASE } from '../../lib/api';
 
 // Icon stubs (replace with lucide-react once installed)
 const Send = (props: any) => <span {...props}>→</span>;
@@ -18,6 +16,7 @@ const ChevronRight = (props: any) => <span {...props}>›</span>;
 const Copy = (props: any) => <span {...props}>📋</span>;
 const Check = (props: any) => <span {...props}>✓</span>;
 const BrainCircuit = (props: any) => <span {...props}>🧠</span>;
+const Download = (props: any) => <span {...props}>⬇</span>;
 import { Button } from '../../components/ui/Button';
 import { Citation } from '../../types';
 
@@ -115,7 +114,9 @@ export function ChatInterface() {
     activeConversation, sendMessage, isTyping, activeCitation, 
     setActiveCitation 
   } = useChat();
+  const { user, getToken } = useAuth();
   const [input, setInput] = useState('');
+  const [exportStatus, setExportStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const messages = activeConversation?.messages || [];
@@ -126,6 +127,44 @@ export function ChatInterface() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
+
+  const handleDownloadAndEmail = async () => {
+    if (!messages.length) return;
+    setExportStatus('loading');
+
+    // 1. Download as .txt locally
+    const text = messages
+      .map(m => `[${m.role === 'user' ? 'You' : 'OpsMind AI'}]\n${m.content}`)
+      .join('\n\n---\n\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `opsmind-chat-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // 2. Send email copy
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/email/chat-export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          conversationTitle: activeConversation?.title || 'Chat Export'
+        })
+      });
+      setExportStatus(res.ok ? 'done' : 'error');
+    } catch {
+      setExportStatus('error');
+    }
+
+    setTimeout(() => setExportStatus('idle'), 3000);
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -209,7 +248,22 @@ export function ChatInterface() {
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pt-10 custom-scrollbar">
+            <div className="absolute top-0 left-0 right-0 flex justify-end px-6 pt-4 z-10">
+              <button
+                type="button"
+                onClick={handleDownloadAndEmail}
+                disabled={exportStatus === 'loading' || !messages.length}
+                title="Download chat & send email copy"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-white/10 bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:border-white/20 transition-all disabled:opacity-40"
+              >
+                <Download className="w-3.5 h-3.5" />
+                {exportStatus === 'loading' && 'Exporting...'}
+                {exportStatus === 'done' && '✓ Sent to email'}
+                {exportStatus === 'error' && 'Email failed'}
+                {exportStatus === 'idle' && 'Download & Email'}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pt-14 custom-scrollbar">
               {messages.map((msg) => (
                 <div key={msg.id} className={cn('flex max-w-3xl mx-auto gap-5', msg.role === 'user' ? 'opacity-95' : 'animate-in fade-in slide-in-from-bottom-2 duration-300')}>
                   <div className={cn(

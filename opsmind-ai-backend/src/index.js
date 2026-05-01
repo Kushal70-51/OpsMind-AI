@@ -4,7 +4,9 @@ require('dotenv').config();
 
 const { connectDB } = require('./config/db');
 
-const authRoute = require('./routes/auth');
+const { router: authRoute, seedUsers } = require('./routes/auth');
+const forgotPasswordRoute = require('./routes/forgotPassword');
+const emailExportRoute = require('./routes/emailExport');
 const uploadRoute = require('./routes/upload');
 const documentsRoute = require('./routes/documents');
 const searchRoute = require('./routes/search');
@@ -23,6 +25,8 @@ app.use(express.json());
 
 // Routes
 app.use('/auth', authRoute);
+app.use('/auth', forgotPasswordRoute);
+app.use('/email', emailExportRoute);
 app.use('/upload', uploadRoute);
 app.use('/documents', documentsRoute);
 app.use('/search', searchRoute);
@@ -35,7 +39,8 @@ app.get('/', (req, res) => {
 
 // Start server
 connectDB()
-  .then(() => {
+  .then(async () => {
+    await seedUsers();
     app.listen(5000, () => {
       console.log("🚀 Server running on http://localhost:5000");
     });
