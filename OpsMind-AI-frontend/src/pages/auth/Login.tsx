@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -101,6 +101,11 @@ export function Login() {
                   {...register('password')}
                 />
                 {errors.password && <p className="mt-1 text-sm text-red-500 font-medium">{errors.password.message}</p>}
+              </div>
+              <div className="flex justify-end mt-1">
+                <Link to="/forgot-password" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 

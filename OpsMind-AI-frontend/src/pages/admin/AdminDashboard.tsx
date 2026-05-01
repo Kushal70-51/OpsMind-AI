@@ -155,6 +155,7 @@ export function AdminDashboard() {
             accept=".pdf,application/pdf"
             multiple
             className="hidden"
+            title="Upload PDF files"
             onChange={(e) => {
               const files = Array.from(e.target.files ?? []);
               void onDrop(files);
