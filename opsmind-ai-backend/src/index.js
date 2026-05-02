@@ -14,9 +14,16 @@ const app = express();
 
 // ✅ CORS — Frontend ko allow karo
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
-  methods: ["GET", "POST", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://ops-mind-5il9e9yb8-kushal70-51s-projects.vercel.app",
+    /\.vercel\.app$/
+  ],
+  methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -36,8 +43,8 @@ app.get('/', (req, res) => {
 // Start server
 connectDB()
   .then(() => {
-    app.listen(5000, () => {
-      console.log("🚀 Server running on http://localhost:5000");
+    app.listen(process.env.PORT || 5000, () => {
+      console.log(`🚀 Server running on port ${process.env.PORT || 5000}`);
     });
   })
   .catch((err) => {
