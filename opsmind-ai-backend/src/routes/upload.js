@@ -1,11 +1,12 @@
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 
 const { chunkPDF } = require('../services/chunker');
 const { embedChunks } = require('../services/embedder');
 const { getDB } = require('../config/db');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, getBearerToken, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -24,7 +25,23 @@ const upload = multer({
   }
 });
 
-async function processFiles(files) {
+async function getUploadOwner(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return {
+      ownerId: decoded.id || null,
+      ownerEmail: decoded.email || null,
+      ownerName: decoded.name || null
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function processFiles(files, owner = null) {
   let totalChunks = 0;
   const db = getDB();
   const uploadsCollection = db.collection('document_uploads');
@@ -47,7 +64,10 @@ async function processFiles(files) {
             chunkCount: 0,
             uploadedAt: new Date(),
             version: nextVersion,
-            errorReason: null
+            errorReason: null,
+            ownerId: owner?.ownerId ?? null,
+            ownerEmail: owner?.ownerEmail ?? null,
+            ownerName: owner?.ownerName ?? null
           }
         },
         { upsert: true }
@@ -106,8 +126,14 @@ async function processFiles(files) {
       );
 
       // 🔹 Step 3: Save to DB (MongoDB Atlas via MONGODB_URI)
-      await db.collection('documents').insertMany(embedded);
-      totalChunks += embedded.length;
+      const embeddedWithOwner = embedded.map(chunk => ({
+        ...chunk,
+        ownerId: owner?.ownerId ?? null,
+        ownerEmail: owner?.ownerEmail ?? null,
+        ownerName: owner?.ownerName ?? null
+      }));
+      await db.collection('documents').insertMany(embeddedWithOwner);
+      totalChunks += embeddedWithOwner.length;
 
       await uploadsCollection.updateOne(
         { filename: fileName },
@@ -116,7 +142,10 @@ async function processFiles(files) {
             stage: 'done',
             chunkCount: embedded.length,
             uploadedAt: new Date(),
-            errorReason: null
+            errorReason: null,
+            ownerId: owner?.ownerId ?? null,
+            ownerEmail: owner?.ownerEmail ?? null,
+            ownerName: owner?.ownerName ?? null
           }
         }
       );
@@ -155,7 +184,8 @@ router.post('/', upload.array('pdf', 10), async (req, res) => {
 
     console.log(`📤 Files received: ${files.length}`);
 
-    const totalChunks = await processFiles(files);
+  const owner = await getUploadOwner(req);
+  const totalChunks = await processFiles(files, owner);
 
     res.json({
       success: true,
@@ -179,7 +209,11 @@ router.post('/admin', requireAuth, requireRole(['admin']), upload.array('pdf', 1
 
     console.log(`📤 Admin files received: ${files.length} | user: ${req.user.email}`);
 
-    const totalChunks = await processFiles(files);
+    const totalChunks = await processFiles(files, {
+      ownerId: req.user.id,
+      ownerEmail: req.user.email,
+      ownerName: req.user.name || null
+    });
 
     return res.json({
       success: true,

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { auth, googleProvider } from '../config/firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signOut } from 'firebase/auth';
 
 import { API_BASE } from '../lib/api';
 const USER_KEY = 'opsmind_user';
@@ -75,8 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = async (): Promise<{ error?: string }> => {
     try {
+      await signOut(auth);
       const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
+      const idToken = await result.user.getIdToken(true);
 
       const res = await fetch(`${API_BASE}/auth/firebase`, {
         method: 'POST',
@@ -109,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_KEY);
+    void signOut(auth);
   };
 
   const getToken = () => localStorage.getItem(TOKEN_KEY);

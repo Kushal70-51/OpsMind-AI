@@ -84,7 +84,7 @@ export function AdminDashboard() {
     acceptedFiles.forEach(f => formData.append('pdf', f));
 
     try {
-      const res = await fetch(`${API_BASE}/upload/admin`, {
+      const res = await fetch(`${API_BASE}/upload`, {
         method: 'POST',
         body: formData,
         headers: authHeaders()

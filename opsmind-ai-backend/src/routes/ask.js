@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
 
 const { embedText } = require("../services/embedder");
 const { getDB } = require("../config/db");
+const { getBearerToken, JWT_SECRET } = require("../middleware/auth");
 
 const Groq = require("groq-sdk");
 require("dotenv").config();
@@ -89,6 +91,22 @@ function detectQueryType(query) {
   return "general";
 }
 
+function getUserScope(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return {
+      ownerId: decoded.id || null,
+      ownerEmail: decoded.email || null,
+      role: decoded.role || null
+    };
+  } catch {
+    return null;
+  }
+}
+
 router.post("/", async (req, res) => {
   try {
     const { query, chatHistory = [], file } = req.body;
@@ -148,6 +166,16 @@ Return only the rewritten query, nothing else.`
     // 2️⃣ Embed
     const queryEmbedding = await embedText(enhancedQuery);
     const db = getDB();
+    const scope = getUserScope(req);
+    const isAdmin = req.user?.role === 'admin';
+    const visibilityFilter = isAdmin || !scope ? {} : {
+      $or: [
+        { ownerEmail: scope.ownerEmail },
+        { ownerId: scope.ownerId },
+        { ownerEmail: { $exists: false } },
+        { ownerId: { $exists: false } }
+      ]
+    };
 
     // 3️⃣ Vector Search
     const pipeline = [
@@ -157,7 +185,8 @@ Return only the rewritten query, nothing else.`
           path: "embedding",
           queryVector: queryEmbedding,
           numCandidates: 800,
-          limit: 25
+          limit: 25,
+          ...(Object.keys(visibilityFilter).length ? { filter: visibilityFilter } : {})
         }
       },
       {

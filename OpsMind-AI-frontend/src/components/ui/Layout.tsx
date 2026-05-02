@@ -29,9 +29,14 @@ export function Layout() {
           headers: { 'Authorization': `Bearer ${getToken()}` }
         });
         const data = await res.json();
+        if (!res.ok || !Array.isArray(data)) {
+          setProjects([]);
+          return;
+        }
         setProjects(data.map((d: any) => ({ name: d.filename })));
       } catch (err) {
         console.error('Failed to fetch projects:', err);
+        setProjects([]);
       }
     };
     fetchProjects();
@@ -124,7 +129,15 @@ export function Layout() {
           <div>
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Documents</span>
-              <Plus className="w-3.5 h-3.5 text-zinc-600 hover:text-zinc-300 cursor-pointer" onClick={() => navigate('/admin')} />
+              {user?.role === 'admin' && (
+                <Plus
+                  className="w-3.5 h-3.5 text-zinc-600 hover:text-zinc-300 cursor-pointer"
+                  onClick={() => {
+                    if (mobileMenuOpen) setMobileMenuOpen(false);
+                    navigate('/documents');
+                  }}
+                />
+              )}
             </div>
             <div className="space-y-0.5">
               {filteredProjects.length === 0 ? (
@@ -198,6 +211,7 @@ export function Layout() {
               </div>
               <div className="flex-1 text-left min-w-0">
                 <div className="text-[13px] font-medium text-zinc-100 truncate">{user?.name}</div>
+                <div className="text-[11px] text-zinc-500 truncate">{user?.email}</div>
                 <div className="text-[11px] text-zinc-500 truncate">{user?.role}</div>
               </div>
               <button 

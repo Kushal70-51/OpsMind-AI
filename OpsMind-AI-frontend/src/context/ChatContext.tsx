@@ -20,27 +20,23 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'opsmind_conversations';
+const ACTIVE_CHAT_KEY = 'opsmind_active_chat_id';
+
+function getScopedStorageKey(userId: string | null | undefined, email: string | null | undefined) {
+  const scope = userId || email || 'anonymous';
+  return `${STORAGE_KEY}_${scope}`;
+}
+
+function getScopedActiveChatKey(userId: string | null | undefined, email: string | null | undefined) {
+  const scope = userId || email || 'anonymous';
+  return `${ACTIVE_CHAT_KEY}_${scope}`;
+}
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { getToken } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    try {
-      return (JSON.parse(raw) as Conversation[]).map(c => ({
-        ...c,
-        createdAt: new Date(c.createdAt),
-        updatedAt: new Date(c.updatedAt),
-        messages: c.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) }))
-      }));
-    } catch {
-      return [];
-    }
-  });
-
-  const [activeId, setActiveId] = useState<string | null>(() => {
-    return localStorage.getItem('opsmind_active_chat_id');
-  });
+  const { user, getToken } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const [isTyping, setIsTyping] = useState(false);
   const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
@@ -49,13 +45,45 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const activeConversation = conversations.find(c => c.id === activeId) || null;
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-  }, [conversations]);
+    setIsHydrated(false);
+    const scopedStorageKey = getScopedStorageKey(user?.id, user?.email);
+    const scopedActiveChatKey = getScopedActiveChatKey(user?.id, user?.email);
+
+    const rawConversations = localStorage.getItem(scopedStorageKey);
+    if (rawConversations) {
+      try {
+        const parsed = JSON.parse(rawConversations) as Conversation[];
+        setConversations(parsed.map(c => ({
+          ...c,
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt),
+          messages: c.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) }))
+        })));
+      } catch {
+        setConversations([]);
+      }
+    } else {
+      setConversations([]);
+    }
+
+    const scopedActiveId = localStorage.getItem(scopedActiveChatKey);
+    setActiveId(scopedActiveId);
+
+    setIsHydrated(true);
+  }, [user?.id, user?.email]);
 
   useEffect(() => {
-    if (activeId) localStorage.setItem('opsmind_active_chat_id', activeId);
-    else localStorage.removeItem('opsmind_active_chat_id');
-  }, [activeId]);
+    if (!isHydrated) return;
+    const scopedStorageKey = getScopedStorageKey(user?.id, user?.email);
+    localStorage.setItem(scopedStorageKey, JSON.stringify(conversations));
+  }, [conversations, user?.id, user?.email, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const scopedActiveChatKey = getScopedActiveChatKey(user?.id, user?.email);
+    if (activeId) localStorage.setItem(scopedActiveChatKey, activeId);
+    else localStorage.removeItem(scopedActiveChatKey);
+  }, [activeId, user?.id, user?.email, isHydrated]);
 
   const createNewChat = useCallback(() => {
     const newChat: Conversation = {
